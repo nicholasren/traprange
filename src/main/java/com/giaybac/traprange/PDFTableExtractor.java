@@ -1,17 +1,10 @@
 /**
  * Copyright (C) 2015, GIAYBAC
- *
+ * <p>
  * Released under the MIT license
  */
 package com.giaybac.traprange;
 
-import com.giaybac.traprange.entity.Table;
-import com.giaybac.traprange.entity.TableCell;
-import com.giaybac.traprange.entity.TableRow;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.LinkedListMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Range;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,51 +18,32 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.logging.Level;
+
+import com.giaybac.traprange.entity.Table;
+import com.giaybac.traprange.entity.TableCell;
+import com.giaybac.traprange.entity.TableRow;
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Range;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- *
  * @author THOQ LUONG Mar 22, 2015 3:34:29 PM
  */
 public class PDFTableExtractor {
 
-    //--------------------------------------------------------------------------
-    //  Members
     private final Logger logger = LoggerFactory.getLogger(PDFTableExtractor.class);
-    //contains pages that will be extracted table content.
-    //If this variable doesn't contain any page, all pages will be extracted
-    private final List<Integer> extractedPages = new ArrayList<>();
-    private final List<Integer> exceptedPages = new ArrayList<>();
-    //contains avoided line idx-s for each page,
-    //if this multimap contains only one element and key of this element equals -1
-    //then all lines in extracted pages contains in multi-map value will be avoided
-    private final Multimap<Integer, Integer> pageNExceptedLinesMap = HashMultimap.create();
 
     private InputStream inputStream;
-    private PDDocument document;
-    private String password;
 
-    //--------------------------------------------------------------------------
-    //  Initialization and releasation
-    //--------------------------------------------------------------------------
-    //  Getter N Setter
-    //--------------------------------------------------------------------------
-    //  Method binding
+    private PDDocument document;
+
     public PDFTableExtractor setSource(InputStream inputStream) {
         this.inputStream = inputStream;
-        return this;
-    }
-
-    public PDFTableExtractor setSource(InputStream inputStream,String password) {
-        this.inputStream = inputStream;
-        this.password = password;
         return this;
     }
 
@@ -85,79 +59,25 @@ public class PDFTableExtractor {
         return this.setSource(new File(filePath));
     }
 
-    public PDFTableExtractor setSource(File file,String password) {
-        try {
-            return this.setSource(new FileInputStream(file),password);
-        } catch (FileNotFoundException ex) {
-            throw new RuntimeException("Invalid pdf file", ex);
-        }
-    }
-
-    public PDFTableExtractor setSource(String filePath,String password) {
-        return this.setSource(new File(filePath),password);
-    }
-
-    /**
-     * This page will be analyze and extract its table content
-     *
-     * @param pageIdx
-     * @return
-     */
-    public PDFTableExtractor addPage(int pageIdx) {
-        extractedPages.add(pageIdx);
-        return this;
-    }
-
-    public PDFTableExtractor exceptPage(int pageIdx) {
-        exceptedPages.add(pageIdx);
-        return this;
-    }
-
-    /**
-     * Avoid a specific line in a specific page. LineIdx can be negative number,
-     * -1 is the last line
-     *
-     * @param pageIdx
-     * @param lineIdxs
-     * @return
-     */
-    public PDFTableExtractor exceptLine(int pageIdx, int[] lineIdxs) {
-        for (int lineIdx : lineIdxs) {
-            pageNExceptedLinesMap.put(pageIdx, lineIdx);
-        }
-        return this;
-    }
-
-    /**
-     * Avoid this line in all extracted pages. LineIdx can be negative number,
-     * -1 is the last line
-     *
-     * @param lineIdxs
-     * @return
-     */
-    public PDFTableExtractor exceptLine(int[] lineIdxs) {
-        this.exceptLine(-1, lineIdxs);
-        return this;
-    }
-
     public List<Table> extract() {
         List<Table> retVal = new ArrayList<>();
         Multimap<Integer, Range<Integer>> pageIdNLineRangesMap = LinkedListMultimap.create();
         Multimap<Integer, TextPosition> pageIdNTextsMap = LinkedListMultimap.create();
-        try {
-            this.document = this.password!=null?PDDocument.load(inputStream,this.password):PDDocument.load(inputStream);
-            for (int pageId = 0; pageId < document.getNumberOfPages(); pageId++) {
-                boolean b = !exceptedPages.contains(pageId) && (extractedPages.isEmpty() || extractedPages.contains(pageId));
-                if (b) {
-                    List<TextPosition> texts = extractTextPositions(pageId);//sorted by .getY() ASC
-                    //extract line ranges
-                    List<Range<Integer>> lineRanges = getLineRanges(pageId, texts);
-                    //extract column ranges
-                    List<TextPosition> textsByLineRanges = getTextsByLineRanges(lineRanges, texts);
 
-                    pageIdNLineRangesMap.putAll(pageId, lineRanges);
-                    pageIdNTextsMap.putAll(pageId, textsByLineRanges);
-                }
+        try {
+            this.document = load();
+
+            for (int pageId = 0; pageId < document.getNumberOfPages(); pageId++) {
+
+                List<TextPosition> texts = extractTextPositions(pageId);//sorted by .getY() ASC
+                //extract line ranges
+                List<Range<Integer>> lineRanges = getLineRanges(pageId, texts);
+                //extract column ranges
+                List<TextPosition> textsByLineRanges = getTextsByLineRanges(lineRanges, texts);
+
+                pageIdNLineRangesMap.putAll(pageId, lineRanges);
+                pageIdNTextsMap.putAll(pageId, textsByLineRanges);
+
             }
             //Calculate columnRanges
             List<Range<Integer>> columnRanges = getColumnRanges(pageIdNTextsMap.values());
@@ -183,10 +103,15 @@ public class PDFTableExtractor {
         return retVal;
     }
 
+    private PDDocument load() throws IOException {
+        return PDDocument.load(inputStream);
+    }
+
     //--------------------------------------------------------------------------
     //  Implement N Override
     //--------------------------------------------------------------------------
     //  Utils
+
     /**
      * Texts in tableContent have been ordered by .getY() ASC
      *
@@ -197,7 +122,7 @@ public class PDFTableExtractor {
      * @return
      */
     private Table buildTable(int pageIdx, List<TextPosition> tableContent,
-            List<Range<Integer>> rowTrapRanges, List<Range<Integer>> columnTrapRanges) {
+                             List<Range<Integer>> rowTrapRanges, List<Range<Integer>> columnTrapRanges) {
         Table retVal = new Table(pageIdx, columnTrapRanges.size());
         int idx = 0;
         int rowIdx = 0;
@@ -228,7 +153,6 @@ public class PDFTableExtractor {
     }
 
     /**
-     *
      * @param rowIdx
      * @param rowContent
      * @param columnTrapRanges
@@ -303,16 +227,9 @@ public class PDFTableExtractor {
         return extractor.extract();
     }
 
-    private boolean isExceptedLine(int pageIdx, int lineIdx) {
-        boolean retVal = this.pageNExceptedLinesMap.containsEntry(pageIdx, lineIdx)
-                || this.pageNExceptedLinesMap.containsEntry(-1, lineIdx);
-        return retVal;
-    }
-
     /**
-     *
      * Remove all texts in excepted lines
-     *
+     * <p>
      * TexPositions are sorted by .getY() ASC
      *
      * @param lineRanges
@@ -363,22 +280,9 @@ public class PDFTableExtractor {
             lineTrapRangeBuilder.addRange(lineRange);
         }
         List<Range<Integer>> lineTrapRanges = lineTrapRangeBuilder.build();
-        List<Range<Integer>> retVal = removeExceptedLines(pageId, lineTrapRanges);
-        return retVal;
+        return lineTrapRanges;
     }
 
-    private List<Range<Integer>> removeExceptedLines(int pageIdx, List<Range<Integer>> lineTrapRanges) {
-        List<Range<Integer>> retVal = new ArrayList<>();
-        for (int lineIdx = 0; lineIdx < lineTrapRanges.size(); lineIdx++) {
-            boolean isExceptedLine = isExceptedLine(pageIdx, lineIdx)
-                    || isExceptedLine(pageIdx, lineIdx - lineTrapRanges.size());
-            if (!isExceptedLine) {
-                retVal.add(lineTrapRanges.get(lineIdx));
-            }
-        }
-        //return
-        return retVal;
-    }
 
     //--------------------------------------------------------------------------
     //  Inner class
