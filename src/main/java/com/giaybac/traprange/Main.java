@@ -25,10 +25,9 @@ public class Main {
         PropertyConfigurator.configure(Main.class.getResource("/com/giaybac/traprange/log4j.properties"));
 
 //        String path = "/Users/twer/personal/lichao/pdf-text-extractor/traprange/docs/input/text-pdf-input.pdf";
-
 //        String path = "/Users/twer/personal/lichao/pdf-text-extractor/traprange/docs/input/test-table-pdf-2.pdf";
-        String path = "/Users/twer/personal/lichao/pdf-text-extractor/traprange/docs/input/test-table-noisy.pdf";
-//        String path = "/Users/twer/personal/lichao/pdf-text-extractor/traprange/docs/input/test-table-pdf.pdf";
+//        String path = "/Users/twer/personal/lichao/pdf-text-extractor/traprange/docs/input/test-table-noisy.pdf";
+        String path = "/Users/twer/personal/lichao/pdf-text-extractor/traprange/docs/input/test-table-pdf.pdf";
         extractTables(path);
 
     }
