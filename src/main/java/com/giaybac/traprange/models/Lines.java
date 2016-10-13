@@ -1,13 +1,14 @@
 package com.giaybac.traprange.models;
 
-import static com.giaybac.traprange.support.Ranges.vertical;
 import static com.giaybac.traprange.support.Ranges.horizontal;
+import static com.giaybac.traprange.support.Ranges.vertical;
+import static com.giaybac.traprange.support.Ranges.verticalRangeOf;
 import static java.util.stream.Collectors.toList;
 
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
-import com.giaybac.traprange.support.Ranges;
 import com.google.common.collect.Range;
 import org.apache.pdfbox.text.TextPosition;
 
@@ -18,13 +19,22 @@ public class Lines {
         this.items = items;
     }
 
-    public  static Lines of(List<TextPosition> texts) {
-        List<Range<Integer>> rowRanges = vertical(texts);
-        List<Line> lines = rowRanges.stream().map(range -> {
-            List<TextPosition> positionsInLine = texts.stream().filter(position -> range.encloses(Ranges.verticalRangeOf(position))).collect(toList());
-            return new Line(range, positionsInLine);
-        }).collect(toList());
+    public static Lines of(List<TextPosition> texts) {
+        List<Line> lines = vertical(texts).stream()
+                .map(byRange(texts))
+                .collect(toList());
+
         return new Lines(lines);
+    }
+
+    private static Function<Range<Integer>, Line> byRange(List<TextPosition> texts) {
+        return range -> {
+            List<TextPosition> enclosedTexts = texts.stream()
+                    .filter(position -> range.encloses(verticalRangeOf(position)))
+                    .collect(toList());
+
+            return new Line(range, enclosedTexts);
+        };
     }
 
     public List<TextPosition> denoisedTexts() {
