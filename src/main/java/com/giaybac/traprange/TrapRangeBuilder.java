@@ -1,15 +1,15 @@
 /**
  * Copyright (C) 2015, GIAYBAC
- *
+ * <p>
  * Released under the MIT license
  */
 package com.giaybac.traprange;
 
-import com.google.common.collect.Range;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
+
+import com.google.common.collect.Range;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,12 +43,7 @@ public class TrapRangeBuilder {
     public List<Range<Integer>> build() {
         List<Range<Integer>> retVal = new ArrayList<>();
         //order range by lower Bound
-        Collections.sort(ranges, new Comparator<Range>() {
-            @Override
-            public int compare(Range o1, Range o2) {
-                return o1.lowerEndpoint().compareTo(o2.lowerEndpoint());
-            }
-        });
+        Collections.sort(ranges, (a, b) -> a.lowerEndpoint().compareTo(b.lowerEndpoint()));
 
         for (Range<Integer> range : ranges) {
             if (retVal.isEmpty()) {
@@ -68,11 +63,4 @@ public class TrapRangeBuilder {
         //return
         return retVal;
     }
-
-    //--------------------------------------------------------------------------
-    //  Implement N Override
-    //--------------------------------------------------------------------------
-    //  Utils
-    //--------------------------------------------------------------------------
-    //  Inner class
 }

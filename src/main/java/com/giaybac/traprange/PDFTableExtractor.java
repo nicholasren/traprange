@@ -5,6 +5,8 @@
  */
 package com.giaybac.traprange;
 
+import static java.util.stream.Collectors.toList;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -17,7 +19,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import com.giaybac.traprange.entity.Table;
 import com.giaybac.traprange.entity.TableCell;
@@ -28,6 +34,7 @@ import com.google.common.collect.Range;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
+import org.apache.pdfbox.text.TextPositionComparator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,20 +74,35 @@ public class PDFTableExtractor {
         try {
             this.document = load();
 
-            for (int pageId = 0; pageId < document.getNumberOfPages(); pageId++) {
+            List<Range<Integer>> columnRanges = null;
+            for (int pageNumber = 0; pageNumber < document.getNumberOfPages(); pageNumber++) {
 
-                List<TextPosition> texts = extractTextPositions(pageId);//sorted by .getY() ASC
+                List<TextPosition> texts = extractTextPositions(pageNumber);//sorted by .getY() ASC
+
                 //extract line ranges
-                List<Range<Integer>> lineRanges = getLineRanges(pageId, texts);
-                //extract column ranges
-                List<TextPosition> textsByLineRanges = getTextsByLineRanges(lineRanges, texts);
+                List<Range<Integer>> rowRanges = getLineRanges(texts);
 
-                pageIdNLineRangesMap.putAll(pageId, lineRanges);
-                pageIdNTextsMap.putAll(pageId, textsByLineRanges);
+                Map<Range<Integer>, List<TextPosition>> textsByRow = dividedByRow(texts, rowRanges);
+
+//
+                List<TextPosition> textContent = columnedTextFrom(textsByRow);
+
+                columnRanges = calculateColumnRangeVia(textsByRow);
+                rowRanges = textsByRow.entrySet().stream()
+                        .filter(e -> isNotNoisyRow().test(e.getValue())).map(e -> e.getKey())
+                        .collect(toList());
+                //extract column ranges
+//                List<TextPosition> textContent = getTextsByRowRanges(rowRanges, texts);
+
+
+                pageIdNLineRangesMap.putAll(pageNumber, rowRanges);
+                pageIdNTextsMap.putAll(pageNumber, textContent);
 
             }
             //Calculate columnRanges
-            List<Range<Integer>> columnRanges = getColumnRanges(pageIdNTextsMap.values());
+//            columnRanges = getColumnRanges(pageIdNTextsMap.values());
+
+            System.out.println("=================" + columnRanges);
             for (int pageId : pageIdNTextsMap.keySet()) {
                 Table table = buildTable(pageId, (List) pageIdNTextsMap.get(pageId), (List) pageIdNLineRangesMap.get(pageId), columnRanges);
                 retVal.add(table);
@@ -102,6 +124,12 @@ public class PDFTableExtractor {
         //return
         return retVal;
     }
+
+
+    private String asString(List<TextPosition> value) {
+        return value.stream().map(TextPosition::getUnicode).collect(Collectors.joining(""));
+    }
+
 
     private PDDocument load() throws IOException {
         return PDDocument.load(inputStream);
@@ -129,19 +157,23 @@ public class PDFTableExtractor {
         List<TextPosition> rowContent = new ArrayList<>();
         while (idx < tableContent.size()) {
             TextPosition textPosition = tableContent.get(idx);
+
             Range<Integer> rowTrapRange = rowTrapRanges.get(rowIdx);
-            Range<Integer> textRange = Range.closed((int) textPosition.getY(),
-                    (int) (textPosition.getY() + textPosition.getHeight()));
+            Range<Integer> textRange = enclosedRangeFor(textPosition);
+
             if (rowTrapRange.encloses(textRange)) {
                 rowContent.add(textPosition);
                 idx++;
             } else {
                 TableRow row = buildRow(rowIdx, rowContent, columnTrapRanges);
+                print(row);
                 retVal.getRows().add(row);
                 //next row: clear rowContent
                 rowContent.clear();
                 rowIdx++;
+
             }
+
         }
         //last row
         if (!rowContent.isEmpty() && rowIdx < rowTrapRanges.size()) {
@@ -150,6 +182,14 @@ public class PDFTableExtractor {
         }
         //return
         return retVal;
+    }
+
+    private void print(TableRow row) {
+        System.out.println(row.getCells().stream().map(TableCell::getContent).collect(Collectors.joining("   ")) + "========================");
+    }
+
+    private int lowerBoundOf(TextPosition textPosition) {
+        return (int) textPosition.getY();
     }
 
     /**
@@ -179,8 +219,8 @@ public class PDFTableExtractor {
         while (idx < rowContent.size()) {
             TextPosition textPosition = rowContent.get(idx);
             Range<Integer> columnTrapRange = columnTrapRanges.get(columnIdx);
-            Range<Integer> textRange = Range.closed((int) textPosition.getX(),
-                    (int) (textPosition.getX() + textPosition.getWidth()));
+            Range<Integer> textRange = Range.closed(leftBoundOf(textPosition),
+                    rightBoundOf(textPosition));
             if (columnTrapRange.encloses(textRange)) {
                 cellContent.add(textPosition);
                 idx++;
@@ -227,35 +267,19 @@ public class PDFTableExtractor {
         return extractor.extract();
     }
 
-    /**
-     * Remove all texts in excepted lines
-     * <p>
-     * TexPositions are sorted by .getY() ASC
-     *
-     * @param lineRanges
-     * @param textPositions
-     * @return
-     */
-    private List<TextPosition> getTextsByLineRanges(List<Range<Integer>> lineRanges, List<TextPosition> textPositions) {
-        List<TextPosition> retVal = new ArrayList<>();
-        int idx = 0;
-        int lineIdx = 0;
-        while (idx < textPositions.size() && lineIdx < lineRanges.size()) {
-            TextPosition textPosition = textPositions.get(idx);
-            Range<Integer> textRange = Range.closed((int) textPosition.getY(),
-                    (int) (textPosition.getY() + textPosition.getHeight()));
-            Range<Integer> lineRange = lineRanges.get(lineIdx);
-            if (lineRange.encloses(textRange)) {
-                retVal.add(textPosition);
-                idx++;
-            } else if (lineRange.upperEndpoint() < textRange.lowerEndpoint()) {
-                lineIdx++;
-            } else {
-                idx++;
-            }
+
+    private Map<Range<Integer>, List<TextPosition>> dividedByRow(List<TextPosition> positions, List<Range<Integer>> rowRanges) {
+        Map<Range<Integer>, List<TextPosition>> result = new HashMap<>();
+
+        for (Range rowRange : rowRanges) {
+            positions.stream().filter(position -> rowRange.encloses(enclosedRangeFor(position)))
+                    .forEach(position -> {
+                        List<TextPosition> positionsOfRow = result.getOrDefault(rowRange, new ArrayList<>());
+                        positionsOfRow.add(position);
+                        result.put(rowRange, positionsOfRow);
+                    });
         }
-        //return
-        return retVal;
+        return result;
     }
 
     /**
@@ -265,17 +289,39 @@ public class PDFTableExtractor {
     private List<Range<Integer>> getColumnRanges(Collection<TextPosition> texts) {
         TrapRangeBuilder rangesBuilder = new TrapRangeBuilder();
         for (TextPosition text : texts) {
-            Range<Integer> range = Range.closed((int) text.getX(), (int) (text.getX() + text.getWidth()));
+            Range<Integer> range = Range.closed(leftBoundOf(text), rightBoundOf(text));
             rangesBuilder.addRange(range);
         }
+
         return rangesBuilder.build();
     }
 
-    private List<Range<Integer>> getLineRanges(int pageId, List<TextPosition> pageContent) {
+    private List<Range<Integer>> calculateColumnRangeVia(Map<Range<Integer>, List<TextPosition>> textsByRow) {
+        return getColumnRanges(columnedTextFrom(textsByRow));
+    }
+
+    private List<TextPosition> columnedTextFrom(Map<Range<Integer>, List<TextPosition>> textsByRow) {
+        return textsByRow.values().stream()
+                .filter(isNotNoisyRow())
+                .flatMap(List::stream)
+                .collect(toList());
+    }
+
+
+    private Predicate<List<TextPosition>> isNotNoisyRow() {
+        return e -> getColumnRanges(e).stream().filter(r -> isGreaterThan(r, 400)).collect(toList()).size() <= 0;
+    }
+
+
+    private boolean isGreaterThan(Range<Integer> r, int threshold) {
+        return r.upperEndpoint() - r.lowerEndpoint() > threshold;
+    }
+
+
+    private List<Range<Integer>> getLineRanges(List<TextPosition> pageContent) {
         TrapRangeBuilder lineTrapRangeBuilder = new TrapRangeBuilder();
         for (TextPosition textPosition : pageContent) {
-            Range<Integer> lineRange = Range.closed((int) textPosition.getY(),
-                    (int) (textPosition.getY() + textPosition.getHeight()));
+            Range<Integer> lineRange = enclosedRangeFor(textPosition);
             //add to builder
             lineTrapRangeBuilder.addRange(lineRange);
         }
@@ -283,10 +329,28 @@ public class PDFTableExtractor {
         return lineTrapRanges;
     }
 
+    private int rightBoundOf(TextPosition text) {
+        return (int) (text.getX() + text.getWidth());
+    }
+
+    private int leftBoundOf(TextPosition text) {
+        return (int) text.getX();
+    }
 
     //--------------------------------------------------------------------------
     //  Inner class
+    private Range<Integer> enclosedRangeFor(TextPosition textPosition) {
+        return Range.closed(lowerBoundOf(textPosition), upperBoundOf(textPosition));
+    }
+
+    private int upperBoundOf(TextPosition textPosition) {
+        return (int) (textPosition.getY() + textPosition.getHeight());
+    }
+
+
     private static class TextPositionExtractor extends PDFTextStripper {
+
+        private final TextPositionComparator COMPARATOR = new TextPositionComparator();
 
         private final List<TextPosition> textPositions = new ArrayList<>();
         private final int pageId;
@@ -298,7 +362,7 @@ public class PDFTableExtractor {
             this.pageId = pageId;
         }
 
-        public void stripPage(int pageId) throws IOException {
+        void stripPage(int pageId) throws IOException {
             this.setStartPage(pageId + 1);
             this.setEndPage(pageId + 1);
             try (Writer writer = new OutputStreamWriter(new ByteArrayOutputStream())) {
@@ -311,29 +375,30 @@ public class PDFTableExtractor {
             this.textPositions.addAll(textPositions);
         }
 
-        /**
-         * and order by textPosition.getY() ASC
-         *
-         * @return
-         * @throws IOException
-         */
         private List<TextPosition> extract() throws IOException {
             this.stripPage(pageId);
-            //sort
-            Collections.sort(textPositions, new Comparator<TextPosition>() {
-                @Override
-                public int compare(TextPosition o1, TextPosition o2) {
-                    int retVal = 0;
-                    if (o1.getY() < o2.getY()) {
-                        retVal = -1;
-                    } else if (o1.getY() > o2.getY()) {
-                        retVal = 1;
-                    }
-                    return retVal;
-
-                }
-            });
+            Collections.sort(textPositions, COMPARATOR);
             return this.textPositions;
         }
+
+//        static class TextPositionComparator implements Comparator<TextPosition> {
+//
+//            @Override
+//            public int compare(TextPosition o1, TextPosition o2) {
+//                if (o1.getY() > o2.getY()) {
+//                    return 1;
+//                } else if (o1.getY() < o2.getY()) {
+//                    return -1;
+//                } else {
+//                    if (o1.getX() > o2.getX()) {
+//                        return 1;
+//                    } else if (o1.getX() < o2.getX()) {
+//                        return -1;
+//                    } else {
+//                        return 0;
+//                    }
+//                }
+//            }
+//        }
     }
 }
