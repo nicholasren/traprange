@@ -1,6 +1,6 @@
 package com.giaybac.traprange.models;
 
-import static com.giaybac.traprange.support.Ranges.horizontal;
+import static com.giaybac.traprange.support.Ranges.horizontalTrapRangeOf;
 
 import java.util.List;
 import java.util.function.Predicate;
@@ -26,7 +26,7 @@ public class Line {
     }
 
     Boolean noisy() {
-        return horizontal(texts).stream()
+        return horizontalTrapRangeOf(texts).stream()
                 .filter(noise())
                 .count() > 0;
     }

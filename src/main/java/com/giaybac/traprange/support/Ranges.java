@@ -8,7 +8,7 @@ import org.apache.pdfbox.text.TextPosition;
 
 public class Ranges {
 
-    public static List<Range<Integer>> horizontal(Collection<TextPosition> texts) {
+    public static List<Range<Integer>> horizontalTrapRangeOf(Collection<TextPosition> texts) {
         TrapRangeBuilder rangesBuilder = new TrapRangeBuilder();
 
         for (TextPosition text : texts) {
@@ -18,11 +18,11 @@ public class Ranges {
         return rangesBuilder.build();
     }
 
-    public static List<Range<Integer>> vertical(List<TextPosition> pageContent) {
+    public static List<Range<Integer>> verticalTrapRangesOf(List<TextPosition> texts) {
         TrapRangeBuilder lineTrapRangeBuilder = new TrapRangeBuilder();
 
-        for (TextPosition textPosition : pageContent) {
-            Range<Integer> lineRange = verticalRangeOf(textPosition);
+        for (TextPosition text : texts) {
+            Range<Integer> lineRange = verticalRangeOf(text);
             lineTrapRangeBuilder.addRange(lineRange);
         }
 

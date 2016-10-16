@@ -15,10 +15,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.giaybac.traprange.models.Line;
-import com.giaybac.traprange.models.Lines;
+import com.giaybac.traprange.models.Page;
 import com.giaybac.traprange.result.Cell;
 import com.giaybac.traprange.result.Row;
 import com.giaybac.traprange.result.Table;
@@ -49,43 +50,43 @@ public class PDFTableExtractor {
 
     public List<Table> extract() {
         try (PDDocument document = load()) {
-            List<Lines> pages = pagesIn(document);
-            return pages.stream().map(this::extractTable).collect(toList());
+            List<Page> pages = pagesIn(document);
+
+            return pages.stream()
+                    .map(this::toTable)
+                    .collect(toList());
 
         } catch (IOException ex) {
             throw new RuntimeException("Parse pdf file fail", ex);
         }
     }
 
-    private List<Lines> pagesIn(PDDocument document) {
-        List<Lines> pages = new ArrayList<>();
-        for (int pageNumber = 0; pageNumber < document.getNumberOfPages(); pageNumber++) {
-            Lines lines = Lines.of(textsIn(pageNumber, document));
-            pages.add(lines);
-        }
-        return pages;
-    }
-
-    private PDDocument load() throws IOException {
-        return PDDocument.load(inputStream);
-    }
-
-    private Table extractTable(Lines lines) {
-        List<Row> rows = lines.denoisedLines().stream().map(line -> {
-            List<Cell> cells = lines.horizontalRanges()
-                    .stream()
-                    .map(range -> toCell(line, range))
-                    .collect(toList());
-            return new Row(cells);
-        }).collect(toList());
+    private Table toTable(Page page) {
+        List<Row> rows = page.lines().stream()
+                .map(toRowDividedBy(page.horizontalRanges()))
+                .collect(toList());
 
         return new Table(rows);
     }
 
-    private Cell toCell(Line line, Range<Integer> range) {
-        List<TextPosition> cellText = line.texts().stream().filter(text -> range.encloses(horizontalRangeOf(text))).collect(toList());
-        String cellContent = cellText.stream().map(TextPosition::getUnicode).collect(Collectors.joining());
-        return new Cell(cellContent);
+    private Function<Line, Row> toRowDividedBy(List<Range<Integer>> ranges) {
+        return line -> {
+            List<Cell> cells = ranges.stream()
+                    .map(toEnclosedTextsIn(line.texts()))
+                    .collect(toList());
+            return new Row(cells);
+        };
+    }
+
+    private Function<Range<Integer>, Cell> toEnclosedTextsIn(List<TextPosition> texts) {
+        return range -> {
+
+            List<TextPosition> enclosedTexts = texts.stream()
+                    .filter(text -> range.encloses(horizontalRangeOf(text)))
+                    .collect(toList());
+
+            return new Cell(asString(enclosedTexts));
+        };
     }
 
     private List<TextPosition> textsIn(int pageId, PDDocument document) {
@@ -96,5 +97,22 @@ public class PDFTableExtractor {
             e.printStackTrace();
             return null;
         }
+    }
+
+    private List<Page> pagesIn(PDDocument document) {
+        List<Page> pages = new ArrayList<>();
+        for (int pageNumber = 0; pageNumber < document.getNumberOfPages(); pageNumber++) {
+            Page page = Page.of(textsIn(pageNumber, document));
+            pages.add(page);
+        }
+        return pages;
+    }
+
+    private PDDocument load() throws IOException {
+        return PDDocument.load(inputStream);
+    }
+
+    private String asString(List<TextPosition> cellText) {
+        return cellText.stream().map(TextPosition::getUnicode).collect(Collectors.joining());
     }
 }
