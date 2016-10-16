@@ -27,11 +27,11 @@ public class Line {
 
     Boolean noisy() {
         return horizontalTrapRangeOf(texts).stream()
-                .filter(noise())
+                .filter(isNoisyRange())
                 .count() > 0;
     }
 
-    private Predicate<Range<Integer>> noise() {
+    private Predicate<Range<Integer>> isNoisyRange() {
         return r -> isGreaterThan(r, 400);
     }
 

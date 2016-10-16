@@ -1,8 +1,8 @@
 package com.giaybac.traprange.models;
 
 import static com.giaybac.traprange.support.Ranges.horizontalTrapRangeOf;
-import static com.giaybac.traprange.support.Ranges.verticalTrapRangesOf;
 import static com.giaybac.traprange.support.Ranges.verticalRangeOf;
+import static com.giaybac.traprange.support.Ranges.verticalTrapRangesOf;
 import static java.util.stream.Collectors.toList;
 
 import java.util.List;

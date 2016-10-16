@@ -10,11 +10,15 @@ public class TrapRangeBuilder {
 
     private final List<Range<Integer>> ranges = new ArrayList<>();
 
+    public List<Range<Integer>> getRanges() {
+        return ranges;
+    }
+
     public TrapRangeBuilder addRange(Range<Integer> range) {
         ranges.add(range);
         return this;
     }
-
+    //try k-means
     public List<Range<Integer>> build() {
         List<Range<Integer>> retVal = new ArrayList<>();
         //order range by lower Bound

@@ -6,6 +6,7 @@
 package com.giaybac.traprange.extractors;
 
 import static com.giaybac.traprange.support.Ranges.horizontalRangeOf;
+import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 
 import java.io.File;
@@ -50,7 +51,7 @@ public class PDFTableExtractor {
 
     public List<Table> extract() {
         try (PDDocument document = load()) {
-            List<Page> pages = pagesIn(document);
+            List<Page> pages = pagesIn(document).subList(0,1);
 
             return pages.stream()
                     .map(this::toTable)
@@ -91,11 +92,10 @@ public class PDFTableExtractor {
 
     private List<TextPosition> textsIn(int pageId, PDDocument document) {
         try {
-            TextPositionExtractor extractor = new TextPositionExtractor(document, pageId);
-            return extractor.extract();
+            return new TextPositionExtractor(document, pageId).extract();
         } catch (IOException e) {
             e.printStackTrace();
-            return null;
+            return emptyList();
         }
     }
 
