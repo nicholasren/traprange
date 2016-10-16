@@ -10,36 +10,16 @@ import java.util.Collections;
 import java.util.List;
 
 import com.google.common.collect.Range;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-/**
- *
- * @author THOQ LUONG Mar 19, 2015 10:43:22 PM
- */
 public class TrapRangeBuilder {
 
-    //--------------------------------------------------------------------------
-    //  Members
-    private final Logger logger = LoggerFactory.getLogger(TrapRangeBuilder.class);
     private final List<Range<Integer>> ranges = new ArrayList<>();
 
-    //--------------------------------------------------------------------------
-    //  Initialization and releasation
-    //--------------------------------------------------------------------------
-    //  Getter N Setter
-    //--------------------------------------------------------------------------
-    //  Method binding
     public TrapRangeBuilder addRange(Range<Integer> range) {
         ranges.add(range);
         return this;
     }
 
-    /**
-     * The result will be ordered by lowerEndpoint ASC
-     *
-     * @return
-     */
     public List<Range<Integer>> build() {
         List<Range<Integer>> retVal = new ArrayList<>();
         //order range by lower Bound
@@ -58,9 +38,6 @@ public class TrapRangeBuilder {
                 }
             }
         }
-        //debug
-        logger.debug("Found " + retVal.size() + " trap-range(s)");
-        //return
         return retVal;
     }
 }

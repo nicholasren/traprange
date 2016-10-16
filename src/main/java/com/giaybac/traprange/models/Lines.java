@@ -34,14 +34,14 @@ public class Lines {
     }
 
     public List<TextPosition> denoisedTexts() {
-        return denoisedLines()
+        return denoisedStream()
                 .map(Line::texts)
                 .flatMap(List::stream)
                 .collect(toList());
     }
 
     public List<Range<Integer>> verticalRanges() {
-        return denoisedLines()
+        return denoisedStream()
                 .map(Line::range)
                 .collect(toList());
     }
@@ -50,7 +50,11 @@ public class Lines {
         return horizontal(denoisedTexts());
     }
 
-    private Stream<Line> denoisedLines() {
+    public List<Line> denoisedLines() {
+        return denoisedStream().collect(toList());
+    }
+
+    private Stream<Line> denoisedStream() {
         return items.stream().filter(line -> !line.noisy());
     }
 

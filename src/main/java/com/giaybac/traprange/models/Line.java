@@ -8,7 +8,7 @@ import java.util.function.Predicate;
 import com.google.common.collect.Range;
 import org.apache.pdfbox.text.TextPosition;
 
-class Line {
+public class Line {
     private Range<Integer> range;
     private List<TextPosition> texts;
 
@@ -17,7 +17,7 @@ class Line {
         this.texts = texts;
     }
 
-    List<TextPosition> texts() {
+    public List<TextPosition> texts() {
         return texts;
     }
 

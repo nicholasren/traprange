@@ -24,23 +24,18 @@ public class Ranges {
 
         for (TextPosition textPosition : pageContent) {
             Range<Integer> lineRange = verticalRangeOf(textPosition);
-            //add to builder
             lineTrapRangeBuilder.addRange(lineRange);
         }
 
         return lineTrapRangeBuilder.build();
     }
 
-    public static int rightBoundOf(TextPosition text) {
-        return (int) (text.getX() + text.getWidth());
-    }
-
-    public static int leftBoundOf(TextPosition text) {
-        return (int) text.getX();
-    }
-
     public static Range<Integer> verticalRangeOf(TextPosition textPosition) {
         return Range.closed(lowerBoundOf(textPosition), upperBoundOf(textPosition));
+    }
+
+    public static Range<Integer> horizontalRangeOf(TextPosition text) {
+        return Range.closed(leftBoundOf(text), rightBoundOf(text));
     }
 
     private static int upperBoundOf(TextPosition textPosition) {
@@ -51,7 +46,11 @@ public class Ranges {
         return (int) textPosition.getY();
     }
 
-    private static Range<Integer> horizontalRangeOf(TextPosition text) {
-        return Range.closed(leftBoundOf(text), rightBoundOf(text));
+    private static int rightBoundOf(TextPosition text) {
+        return (int) (text.getX() + text.getWidth());
+    }
+
+    private static int leftBoundOf(TextPosition text) {
+        return (int) text.getX();
     }
 }
