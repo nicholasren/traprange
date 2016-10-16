@@ -15,10 +15,6 @@ import org.apache.pdfbox.text.TextPosition;
 public class Lines {
     private List<Line> items;
 
-    public Lines(List<Line> items) {
-        this.items = items;
-    }
-
     public static Lines of(List<TextPosition> texts) {
         List<Line> lines = vertical(texts).stream()
                 .map(byRange(texts))
@@ -44,13 +40,13 @@ public class Lines {
                 .collect(toList());
     }
 
-    public List<Range<Integer>> ranges() {
+    public List<Range<Integer>> verticalRanges() {
         return denoisedLines()
                 .map(Line::range)
                 .collect(toList());
     }
 
-    public List<Range<Integer>> columnRanges() {
+    public List<Range<Integer>> horizontalRanges() {
         return horizontal(denoisedTexts());
     }
 
@@ -58,5 +54,7 @@ public class Lines {
         return items.stream().filter(line -> !line.noisy());
     }
 
-
+    private Lines(List<Line> items) {
+        this.items = items;
+    }
 }

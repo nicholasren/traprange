@@ -8,11 +8,11 @@ import java.util.function.Predicate;
 import com.google.common.collect.Range;
 import org.apache.pdfbox.text.TextPosition;
 
-public class Line {
+class Line {
     private Range<Integer> range;
     private List<TextPosition> texts;
 
-    public Line(Range<Integer> range, List<TextPosition> texts) {
+    Line(Range<Integer> range, List<TextPosition> texts) {
         this.range = range;
         this.texts = texts;
     }
@@ -26,7 +26,9 @@ public class Line {
     }
 
     Boolean noisy() {
-        return horizontal(texts).stream().filter(noise()).count() > 0;
+        return horizontal(texts).stream()
+                .filter(noise())
+                .count() > 0;
     }
 
     private Predicate<Range<Integer>> noise() {

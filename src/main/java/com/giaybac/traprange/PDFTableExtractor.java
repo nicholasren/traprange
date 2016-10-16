@@ -73,10 +73,10 @@ public class PDFTableExtractor {
             List<Range<Integer>> columnRanges = null;
             for (int pageNumber = 0; pageNumber < document.getNumberOfPages(); pageNumber++) {
 
-                Lines lines = Lines.of(textsIn(pageNumber));
-                columnRanges = lines.columnRanges();
+                Lines lines = Lines.of(textsIn(pageNumber, document));
+                columnRanges = lines.horizontalRanges();
 
-                pageIdNLineRangesMap.putAll(pageNumber, lines.ranges());
+                pageIdNLineRangesMap.putAll(pageNumber, lines.verticalRanges());
                 pageIdNTextsMap.putAll(pageNumber, lines.denoisedTexts());
             }
 
@@ -224,7 +224,7 @@ public class PDFTableExtractor {
         return new TableCell(columnIdx, cellContentString);
     }
 
-    private List<TextPosition> textsIn(int pageId) throws IOException {
+    private List<TextPosition> textsIn(int pageId, PDDocument document) throws IOException {
         TextPositionExtractor extractor = new TextPositionExtractor(document, pageId);
         return extractor.extract();
     }
