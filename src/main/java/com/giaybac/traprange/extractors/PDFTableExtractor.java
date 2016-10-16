@@ -3,7 +3,7 @@
  * <p>
  * Released under the MIT license
  */
-package com.giaybac.traprange;
+package com.giaybac.traprange.extractors;
 
 import static com.giaybac.traprange.support.Ranges.horizontalRangeOf;
 import static java.util.stream.Collectors.toList;

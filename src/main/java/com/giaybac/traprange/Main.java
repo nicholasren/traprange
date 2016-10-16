@@ -8,6 +8,7 @@ package com.giaybac.traprange;
 import java.util.List;
 
 import com.giaybac.traprange.result.Table;
+import com.giaybac.traprange.extractors.PDFTableExtractor;
 
 
 public class Main {

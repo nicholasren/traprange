@@ -1,9 +1,4 @@
-/**
- * Copyright (C) 2015, GIAYBAC
- * <p>
- * Released under the MIT license
- */
-package com.giaybac.traprange;
+package com.giaybac.traprange.support;
 
 import java.util.ArrayList;
 import java.util.Collections;

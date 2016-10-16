@@ -3,7 +3,6 @@ package com.giaybac.traprange.support;
 import java.util.Collection;
 import java.util.List;
 
-import com.giaybac.traprange.TrapRangeBuilder;
 import com.google.common.collect.Range;
 import org.apache.pdfbox.text.TextPosition;
 

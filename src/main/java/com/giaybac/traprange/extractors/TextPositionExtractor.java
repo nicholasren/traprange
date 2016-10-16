@@ -1,4 +1,4 @@
-package com.giaybac.traprange;
+package com.giaybac.traprange.extractors;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
