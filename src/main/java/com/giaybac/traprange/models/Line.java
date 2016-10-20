@@ -1,23 +1,20 @@
 package com.giaybac.traprange.models;
 
-import static com.giaybac.traprange.support.Ranges.horizontalTrapRangeOf;
-
 import java.util.List;
 import java.util.function.Predicate;
 
 import com.google.common.collect.Range;
-import org.apache.pdfbox.text.TextPosition;
 
 public class Line {
     private Range<Integer> range;
-    private List<TextPosition> texts;
+    private List<Text> texts;
 
-    Line(Range<Integer> range, List<TextPosition> texts) {
+    Line(Range<Integer> range, List<Text> texts) {
         this.range = range;
         this.texts = texts;
     }
 
-    public List<TextPosition> texts() {
+    public List<Text> texts() {
         return texts;
     }
 
@@ -25,11 +22,6 @@ public class Line {
         return range;
     }
 
-    Boolean noisy() {
-        return horizontalTrapRangeOf(texts).stream()
-                .filter(isNoisyRange())
-                .count() > 0;
-    }
 
     private Predicate<Range<Integer>> isNoisyRange() {
         return r -> isGreaterThan(r, 400);

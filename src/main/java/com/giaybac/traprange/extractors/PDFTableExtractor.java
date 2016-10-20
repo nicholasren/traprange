@@ -6,60 +6,40 @@
 package com.giaybac.traprange.extractors;
 
 import static com.giaybac.traprange.support.Ranges.horizontalRangeOf;
-import static java.util.Collections.emptyList;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import com.giaybac.traprange.models.Line;
 import com.giaybac.traprange.models.Page;
+import com.giaybac.traprange.models.Text;
 import com.giaybac.traprange.result.Cell;
 import com.giaybac.traprange.result.Row;
 import com.giaybac.traprange.result.Table;
 import com.google.common.collect.Range;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.text.TextPosition;
+import javaslang.control.Try;
 
 public class PDFTableExtractor {
 
-    private InputStream inputStream;
 
-    public PDFTableExtractor setSource(InputStream inputStream) {
-        this.inputStream = inputStream;
+    private String filePath;
+
+    public PDFTableExtractor setSource(String filePath) {
+        this.filePath = filePath;
         return this;
     }
 
-    public PDFTableExtractor setSource(File file) {
-        try {
-            return this.setSource(new FileInputStream(file));
-        } catch (FileNotFoundException ex) {
-            throw new RuntimeException("Invalid pdf file", ex);
-        }
-    }
-
-    public PDFTableExtractor setSource(String filePath) {
-        return this.setSource(new File(filePath));
-    }
-
-    public List<Table> extract() {
-        try (PDDocument document = load()) {
-            List<Page> pages = pagesIn(document).subList(0,1);
+    public Try<List<Table>> extract() {
+        return TextExtractor.with(filePath).map(extractor -> {
+            List<Page> pages = pagesIn(extractor);
 
             return pages.stream()
                     .map(this::toTable)
                     .collect(toList());
 
-        } catch (IOException ex) {
-            throw new RuntimeException("Parse pdf file fail", ex);
-        }
+        });
     }
 
     private Table toTable(Page page) {
@@ -79,10 +59,10 @@ public class PDFTableExtractor {
         };
     }
 
-    private Function<Range<Integer>, Cell> toEnclosedTextsIn(List<TextPosition> texts) {
+    private Function<Range<Integer>, Cell> toEnclosedTextsIn(List<Text> texts) {
         return range -> {
 
-            List<TextPosition> enclosedTexts = texts.stream()
+            List<Text> enclosedTexts = texts.stream()
                     .filter(text -> range.encloses(horizontalRangeOf(text)))
                     .collect(toList());
 
@@ -90,29 +70,13 @@ public class PDFTableExtractor {
         };
     }
 
-    private List<TextPosition> textsIn(int pageId, PDDocument document) {
-        try {
-            return new TextPositionExtractor(document, pageId).extract();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return emptyList();
-        }
+
+    private List<Page> pagesIn(TextExtractor extractor) {
+        return extractor.extractAll().stream().map(Page::of).collect(toList());
     }
 
-    private List<Page> pagesIn(PDDocument document) {
-        List<Page> pages = new ArrayList<>();
-        for (int pageNumber = 0; pageNumber < document.getNumberOfPages(); pageNumber++) {
-            Page page = Page.of(textsIn(pageNumber, document));
-            pages.add(page);
-        }
-        return pages;
-    }
 
-    private PDDocument load() throws IOException {
-        return PDDocument.load(inputStream);
-    }
-
-    private String asString(List<TextPosition> cellText) {
-        return cellText.stream().map(TextPosition::getUnicode).collect(Collectors.joining());
+    private String asString(List<Text> cellText) {
+        return cellText.stream().map(Text::content).collect(joining());
     }
 }

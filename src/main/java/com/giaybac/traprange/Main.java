@@ -13,6 +13,7 @@ import java.util.List;
 
 import com.giaybac.traprange.extractors.PDFTableExtractor;
 import com.giaybac.traprange.result.Table;
+import javaslang.control.Try;
 
 
 public class Main {
@@ -25,10 +26,10 @@ public class Main {
 //        String path = "/Users/twer/personal/lichao/pdf-text-extractor/traprange/docs/input/test-table-noisy.pdf";
         final PDFTableExtractor extractor = new PDFTableExtractor().setSource(path);
 
-        List<Table> tables = extractor.extract();
+        Try<List<Table>> tables = extractor.extract();
 
-        display(tables, "/tmp/out.csv");
-
+        tables.onSuccess(t -> display(t, "/tmp/out.csv"));
+        tables.onFailure(Throwable::printStackTrace);
     }
 
     private static void display(List<Table> tables, String outPath) {
