@@ -1,20 +1,25 @@
 package com.giaybac.traprange.models;
 
+import com.google.common.base.MoreObjects;
 import org.apache.pdfbox.text.TextPosition;
 
 public class Text {
-    private TextPosition underlying;
-    private Coordinate lowerLeft;
-    private Coordinate lowerRight;
-    private Coordinate upperLeft;
-    private Coordinate upperRight;
+
+    private final Coordinate center;
+    private final Coordinate lowerLeft;
+    private final Coordinate lowerRight;
+    private final Coordinate upperLeft;
+    private final Coordinate upperRight;
+    private final String content;
+    private Cluster cluster;
 
     public Text(TextPosition textPosition) {
-        underlying = textPosition;
-        lowerLeft = new Coordinate(underlying.getX(), underlying.getY() + underlying.getHeight());
-        lowerRight = new Coordinate(underlying.getX() + underlying.getWidth(), underlying.getY() + underlying.getHeight());
-        upperLeft = new Coordinate(underlying.getX(), underlying.getY());
-        upperRight = new Coordinate(underlying.getX() + underlying.getWidth(), underlying.getY());
+        lowerLeft = new Coordinate(textPosition.getX(), textPosition.getY() + textPosition.getHeight());
+        lowerRight = new Coordinate(textPosition.getX() + textPosition.getWidth(), textPosition.getY() + textPosition.getHeight());
+        upperLeft = new Coordinate(textPosition.getX(), textPosition.getY());
+        upperRight = new Coordinate(textPosition.getX() + textPosition.getWidth(), textPosition.getY());
+        center = new Coordinate(textPosition.getX() + textPosition.getWidth() / 2, textPosition.getY() + textPosition.getHeight() / 2);
+        content = textPosition.getUnicode();
     }
 
     //lower left
@@ -37,8 +42,35 @@ public class Text {
         return upperRight;
     }
 
-    public String content(){
-        return underlying.getUnicode();
+
+    public float x() {
+        return center.x;
     }
+
+    public float y() {
+        return center.y;
+    }
+
+    public String content() {
+        return content;
+    }
+
+    public Coordinate center() {
+        return center;
+    }
+
+    public void clusterTo(Cluster cluster) {
+        this.cluster = cluster;
+        cluster.add(this);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("center", center)
+                .add("content", content)
+                .toString();
+    }
+
 
 }

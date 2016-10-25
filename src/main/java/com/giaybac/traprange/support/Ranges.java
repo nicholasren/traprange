@@ -18,7 +18,6 @@ import com.google.common.collect.Range;
 public class Ranges {
 
     public static List<Range<Integer>> horizontalTrapRangeOf(Collection<Text> texts) {
-        //TODO:  better solution to classify ranges
         TrapRangeBuilder rangesBuilder = new TrapRangeBuilder();
 
         for (Text text : texts) {
